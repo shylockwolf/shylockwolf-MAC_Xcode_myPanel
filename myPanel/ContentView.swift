@@ -9,8 +9,8 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct ContentView: View {
-    @State private var selectedFiles: [String] = Array(repeating: "", count: 6)
-    @State private var buttonLabels: [String] = Array(repeating: "选择文件", count: 6)
+    @State private var selectedFiles: [String] = Array(repeating: "", count: 9)
+    @State private var buttonLabels: [String] = Array(repeating: "选择文件", count: 9)
     @State private var configFileName = "myPanel.json"
     
     private let configFileURL: URL = {
@@ -29,7 +29,7 @@ struct ContentView: View {
     
     var body: some View {
         ScrollView {
-            VStack(spacing: 20) {
+            VStack(spacing: 15) {
                 HStack {
                     Button(action: {
                         showResetConfirmation()
@@ -67,7 +67,7 @@ struct ContentView: View {
                 .padding(.top, 20)
                 .padding(.horizontal, 20)
                 
-                ForEach(0..<6, id: \.self) { index in
+                ForEach(0..<9, id: \.self) { index in
                     HStack(spacing: 15) {
                         Button(action: {
                             handleButtonClick(index: index)
@@ -96,11 +96,13 @@ struct ContentView: View {
                     .padding(.horizontal, 20)
                 }
                 
+                // 添加一个小的底部填充，但不使用Spacer()
                 Spacer()
+                    .frame(height: 20)
             }
         }
-        .frame(minWidth: 400, idealWidth: 400, maxWidth: .infinity, 
-               minHeight: 500, idealHeight: 500, maxHeight: .infinity)
+        .frame(minWidth: 350, idealWidth: 350, maxWidth: .infinity,
+               minHeight: 450, idealHeight: 450, maxHeight: .infinity)
         .onAppear {
             loadConfig()
         }
@@ -216,12 +218,6 @@ struct ContentView: View {
             "preferences": [
                 "theme": "default",
                 "language": "en"
-            ],
-            "windowState": [
-                "width": 800,
-                "height": 600,
-                "x": 0,
-                "y": 0
             ],
             "last_modified_times": lastModifiedTimes
         ]

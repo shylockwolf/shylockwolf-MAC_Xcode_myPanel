@@ -12,7 +12,9 @@ struct myPanelApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .frame(minWidth: 350, idealWidth: 350, maxWidth: .infinity,
+                       minHeight: 450, idealHeight: 450, maxHeight: .infinity)
         }
-        .defaultSize(width: 400, height: 500)
+        .defaultSize(width: 350, height: 450)
     }
 }

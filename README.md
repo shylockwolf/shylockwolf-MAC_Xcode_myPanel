@@ -16,6 +16,20 @@ myPanel is a lightweight Electron-based application designed to manage and acces
 
 ## Changelog
 
+### Version 1.6
+
+#### New Features
+- Added reset button for clearing all configuration and resetting application state
+- Updated UI with version, author, and creation date information in the top-right corner
+
+#### Bug Fixes
+- Fixed unreachable catch block warning in file opening functionality
+- Resolved compilation errors related to API usage
+
+#### Improvements
+- Optimized UI layout with better information organization
+- Enhanced user interaction with confirmation dialog for reset action
+
 ### Version 1.5
 
 #### New Features
