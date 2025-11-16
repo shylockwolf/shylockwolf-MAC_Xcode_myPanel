@@ -30,10 +30,42 @@ struct ContentView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                Text("myPanel")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .padding(.top, 20)
+                HStack {
+                    Button(action: {
+                        showResetConfirmation()
+                    }) {
+                        Image(systemName: "arrow.counterclockwise")
+                            .foregroundColor(.gray)
+                            .padding(8)
+                            .background(Color.gray.opacity(0.1))
+                            .cornerRadius(8)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .help("重置应用")
+                    
+                    Spacer()
+                    
+                    Text("myPanel")
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+                    
+                    Spacer()
+                    
+                    // 版本、作者和日期信息
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("Shylock Wolf")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                        Text("v 1.6")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                        Text("2025-11-16")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                }
+                .padding(.top, 20)
+                .padding(.horizontal, 20)
                 
                 ForEach(0..<6, id: \.self) { index in
                     HStack(spacing: 15) {
@@ -128,18 +160,23 @@ struct ContentView: View {
             return
         }
         
-        do {
-            if isAppBundle {
-                // 打开应用程序包
-                NSWorkspace.shared.openApplication(at: fileURL, configuration: NSWorkspace.OpenConfiguration())
-            } else {
-                // 打开普通文件
-                NSWorkspace.shared.open(fileURL)
+        if isAppBundle {
+            // 打开应用程序包
+            do {
+                let runningApp = try NSWorkspace.shared.launchApplication(at: fileURL, options: [], configuration: [:])
+                print("已打开 \(index + 1): \(filePath)")
+            } catch {
+                showAlert(title: "打开失败", message: error.localizedDescription)
+                print("打开失败: \(error.localizedDescription)")
             }
-            print("已打开 \(index + 1): \(filePath)")
-        } catch {
-            showAlert(title: "打开失败", message: error.localizedDescription)
-            print("打开失败: \(error.localizedDescription)")
+        } else {
+            // 打开普通文件
+            if NSWorkspace.shared.open(fileURL) {
+                print("已打开 \(index + 1): \(filePath)")
+            } else {
+                showAlert(title: "打开失败", message: "无法打开文件")
+                print("打开失败: 无法打开文件")
+            }
         }
     }
     
@@ -265,6 +302,38 @@ struct ContentView: View {
         alert.alertStyle = .warning
         alert.addButton(withTitle: "确定")
         alert.runModal()
+    }
+    
+    private func showResetConfirmation() {
+        let alert = NSAlert()
+        alert.messageText = "重置应用"
+        alert.informativeText = "这将清空所有配置并重置应用为初始状态。您确定要继续吗？"
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "重置")
+        alert.addButton(withTitle: "取消")
+        
+        if alert.runModal() == .alertFirstButtonReturn {
+            resetApp()
+        }
+    }
+    
+    private func resetApp() {
+        do {
+            // 删除配置文件
+            if FileManager.default.fileExists(atPath: configFileURL.path) {
+                try FileManager.default.removeItem(at: configFileURL)
+                print("已删除配置文件: \(configFileURL.path)")
+            }
+            
+            // 重置应用状态
+            selectedFiles = Array(repeating: "", count: 6)
+            buttonLabels = Array(repeating: "选择文件", count: 6)
+            
+            showAlert(title: "重置成功", message: "应用已重置为初始状态")
+        } catch {
+            print("重置应用失败: \(error.localizedDescription)")
+            showAlert(title: "重置失败", message: "无法重置应用: \(error.localizedDescription)")
+        }
     }
 }
 
