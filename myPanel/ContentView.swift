@@ -60,7 +60,7 @@ struct ContentView: View {
                 Spacer()
             }
         }
-        .frame(minWidth: 400, minHeight: 500)
+        .frame(width: 400, height: 500)
         .onAppear {
             loadConfig()
         }
