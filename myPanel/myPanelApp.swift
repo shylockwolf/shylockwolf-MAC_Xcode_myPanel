@@ -13,6 +13,6 @@ struct myPanelApp: App {
         WindowGroup {
             ContentView()
         }
-        .windowResizability(.contentSize)
+        .defaultSize(width: 400, height: 500)
     }
 }

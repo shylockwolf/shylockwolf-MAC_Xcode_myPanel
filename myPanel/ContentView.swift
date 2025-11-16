@@ -14,10 +14,17 @@ struct ContentView: View {
     @State private var configFileName = "myPanel.json"
     
     private let configFileURL: URL = {
-        // 获取应用程序所在的目录
-        let bundleURL = Bundle.main.bundleURL
-        let appDirectory = bundleURL.deletingLastPathComponent()
-        return appDirectory.appendingPathComponent("myPanel.json")
+        #if DEBUG
+        // 在调试模式下，将配置文件放在与应用相同的目录中
+        // 这样便于开发和测试
+        let currentDirectory = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+        return currentDirectory.appendingPathComponent("myPanel.json")
+        #else
+        // 在发布模式下，将配置文件放在用户文档目录中
+        // 这样可以确保有写入权限
+        let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        return documentsDirectory.appendingPathComponent("myPanel.json")
+        #endif
     }()
     
     var body: some View {
@@ -60,7 +67,8 @@ struct ContentView: View {
                 Spacer()
             }
         }
-        .frame(width: 400, height: 500)
+        .frame(minWidth: 400, idealWidth: 400, maxWidth: .infinity, 
+               minHeight: 500, idealHeight: 500, maxHeight: .infinity)
         .onAppear {
             loadConfig()
         }
@@ -84,12 +92,16 @@ struct ContentView: View {
         
         if panel.runModal() == .OK {
             if let url = panel.url {
+                print("用户选择了文件: \(url.path)")
                 let isFile = FileManager.default.fileExists(atPath: url.path)
                 let isAppBundle = url.pathExtension == "app" && FileManager.default.fileExists(atPath: url.path)
+                
+                print("文件存在: \(isFile), 是应用包: \(isAppBundle)")
                 
                 if isFile || isAppBundle {
                     selectedFiles[index] = url.path
                     buttonLabels[index] = "打开"
+                    print("更新UI状态并保存配置")
                     saveConfig()
                     print("成功选择文件 \(index + 1): \(url.path)")
                 } else {
@@ -153,6 +165,7 @@ struct ContentView: View {
                         lastModifiedTimes.append(0)
                     }
                 } catch {
+                    print("获取文件修改时间失败: \(filePath), 错误: \(error.localizedDescription)")
                     lastModifiedTimes.append(0)
                 }
             } else {
@@ -160,8 +173,19 @@ struct ContentView: View {
             }
         }
         
+        // 使用与myPanel.json相同的格式保存配置
         let configData: [String: Any] = [
-            "selected_files": selectedFiles,
+            "lastOpenedFiles": selectedFiles,
+            "preferences": [
+                "theme": "default",
+                "language": "en"
+            ],
+            "windowState": [
+                "width": 800,
+                "height": 600,
+                "x": 0,
+                "y": 0
+            ],
             "last_modified_times": lastModifiedTimes
         ]
         
@@ -169,43 +193,68 @@ struct ContentView: View {
             let jsonData = try JSONSerialization.data(withJSONObject: configData, options: .prettyPrinted)
             try jsonData.write(to: configFileURL)
             print("配置已保存到: \(configFileURL.path)")
+            print("保存的文件列表: \(selectedFiles)")
         } catch {
             print("保存配置失败: \(error.localizedDescription)")
+            print("配置文件路径: \(configFileURL.path)")
         }
     }
     
     private func loadConfig() {
-        guard FileManager.default.fileExists(atPath: configFileURL.path) else { return }
+        print("尝试加载配置文件: \(configFileURL.path)")
+        guard FileManager.default.fileExists(atPath: configFileURL.path) else { 
+            print("配置文件不存在")
+            return 
+        }
         
         do {
             let jsonData = try Data(contentsOf: configFileURL)
+            print("配置文件加载成功")
+            // 解析JSON格式（myPanel.json中的格式）
             if let configData = try JSONSerialization.jsonObject(with: jsonData) as? [String: Any] {
-                
-                if let savedFiles = configData["selected_files"] as? [String] {
-                    var files = savedFiles
-                    if files.count < 6 {
-                        files.append(contentsOf: Array(repeating: "", count: 6 - files.count))
-                    }
-                    
-                    // 检查是否包含eject_devices文件
-                    _ = files.contains { $0.contains("eject_devices") } // 这个变量用于未来的窗口大小调整
-                    
-                    for i in 0..<min(6, files.count) {
-                        if !files[i].isEmpty {
-                            let isFile = FileManager.default.fileExists(atPath: files[i])
-                            let isAppBundle = URL(fileURLWithPath: files[i]).pathExtension == "app" && FileManager.default.fileExists(atPath: files[i])
-                            
-                            if isFile || isAppBundle {
-                                selectedFiles[i] = files[i]
-                                buttonLabels[i] = "打开"
-                                print("从配置加载 \(i + 1): \(files[i])")
-                            }
-                        }
-                    }
+                print("配置文件内容: \(configData)")
+                // 检查是否有lastOpenedFiles字段（新格式）
+                if let savedFiles = configData["lastOpenedFiles"] as? [String] {
+                    print("使用新格式加载配置")
+                    loadFiles(savedFiles)
+                    return
                 }
+                // 如果没有lastOpenedFiles字段，则尝试旧格式
+                else if let savedFiles = configData["selected_files"] as? [String] {
+                    print("使用旧格式加载配置")
+                    loadFiles(savedFiles)
+                    return
+                }
+            }
+            
+            // 如果顶层不是字典，则尝试作为数组解析（旧格式直接存储文件数组）
+            if let savedFiles = try JSONSerialization.jsonObject(with: jsonData) as? [String] {
+                print("使用数组格式加载配置")
+                loadFiles(savedFiles)
             }
         } catch {
             print("加载配置失败: \(error.localizedDescription)")
+        }
+    }
+    
+    private func loadFiles(_ files: [String]) {
+        var loadedFiles = files
+        // 确保有6个元素
+        if loadedFiles.count < 6 {
+            loadedFiles.append(contentsOf: Array(repeating: "", count: 6 - loadedFiles.count))
+        }
+        
+        for i in 0..<min(6, loadedFiles.count) {
+            if !loadedFiles[i].isEmpty {
+                let isFile = FileManager.default.fileExists(atPath: loadedFiles[i])
+                let isAppBundle = URL(fileURLWithPath: loadedFiles[i]).pathExtension == "app" && FileManager.default.fileExists(atPath: loadedFiles[i])
+                
+                if isFile || isAppBundle {
+                    selectedFiles[i] = loadedFiles[i]
+                    buttonLabels[i] = "打开"
+                    print("从配置加载 \(i + 1): \(loadedFiles[i])")
+                }
+            }
         }
     }
     

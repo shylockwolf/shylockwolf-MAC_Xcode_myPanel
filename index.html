@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>myPanel v1.5</title>
+</head>
+<body>
+  <div id="app">
+    <h1>myPanel v{{ version }}</h1>
+    <div v-for="(file, index) in files" :key="index">
+      <button @click="selectFile(index)">选择文件</button>
+      <input type="text" :value="file || '未选择文件'" readonly />
+    </div>
+  </div>
+</body>
+</html>
